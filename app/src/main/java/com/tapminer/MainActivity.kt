@@ -108,8 +108,8 @@ class MainActivity : Activity(), GameHost {
                 val dead = max(16f, 0.02f * resources.displayMetrics.widthPixels)
                 if (abs(dx) < dead && abs(dy) < dead) { tap(); return true }
                 if (abs(dx) >= abs(dy)) {
-                    // Forward swipe = shift up a gear. dx sign inverted on this pad.
-                    gear(if (dx < 0) 1 else -1)
+                    // Forward swipe = shift up a gear (mapping confirmed on device).
+                    gear(if (dx < 0) -1 else 1)
                 } else {
                     select(if (dy < 0) -1 else 1)
                 }

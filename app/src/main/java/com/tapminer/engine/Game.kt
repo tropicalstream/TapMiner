@@ -160,7 +160,7 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
     private val rng = Random(System.nanoTime())
     private var mineCombo = 0
     private var mineVoiceT = 0f
-    private var titleVoiceT = 3f
+    private var titleVoiceT = 8f
     private var vowSaid = true
     private var vowT = 0f
 
@@ -296,7 +296,8 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
                 titleVoiceT -= dt
                 wheelSpin += dt * 5f
                 if (titleVoiceT <= 0f) {
-                    titleVoiceT = 5.5f + rng.nextFloat() * 4f
+                    // Sparse attract chatter — natives pipe up only occasionally.
+                    titleVoiceT = (5.5f + rng.nextFloat() * 4f) * 5f
                     host.say("alien_flee_${1 + rng.nextInt(4)}")
                 }
             }
