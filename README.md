@@ -21,10 +21,11 @@ ever:
 | Gesture | Action |
 |---|---|
 | **Tap** | Hop the rover — a big, floaty low-gravity bound over craters, boulders, spires, and mines. |
-| **Swipe forward / back** | Shift **up / down a gear** (four gears). Faster = more distance and score, less time to read what's coming — and the engine literally revs with the shift. |
-| Swipe up / down | Title: choose mode. Game over: back to mode select. |
+| **Swipe forward / back** | Shift **up / down a gear** (four gears). Faster = more distance and score, less time to read what's coming — and the engine literally revs with the shift. Gearing is also how you slide out from under a falling bomb. |
+| Swipe up / down | Game over: back to the title. |
 
-There is no gun. You survive by *timing* and *gearing*, not shooting.
+No permanent gun. **The main game is to *avoid* enemy fire** — you survive by
+timing your hops, changing gears, and grabbing the occasional weapon.
 
 ## The job
 
@@ -32,28 +33,40 @@ There is no gun. You survive by *timing* and *gearing*, not shooting.
   you scoop automatically. But hopping flies you clean over them, so every
   jump you take to dodge a hazard is ore you leave behind. Stay low to get
   rich; get rich and you die. Choose.
-- **Every crystal enrages the locals.** A FURY meter climbs as you mine.
-  Cross its thresholds and the moon's inhabitants escalate: first a lone
-  saucer, then flights of them strafing overhead and **dropping bombs that
-  blow fresh craters into your path**, then ground-shaking, screen-rattling
-  wrath. Mining is the whole point and the whole problem.
+- **Every crystal enrages the locals.** They start friendly — **sectors 1–2,
+  peaceful ships drift overhead, just watching.** But a FURY meter climbs as
+  you mine, and **by sector 3 they've armed and turned antagonistic**,
+  strafing overhead and **dropping bombs that blow fresh craters into your
+  path**, building to ground-shaking, screen-rattling wrath. Mining is the
+  whole point and the whole problem.
 - **Colonize sector by sector.** A progress bar tracks each sector; reach the
   end to stake an outpost, then the next stretch starts angrier. Crash into a
   rock, drop into a crater, or eat a bomb and you lose a rig — three to start,
   a spare every 4,000 points.
 
-## Two shifts
+## Gadgets (drop from ore)
 
-- **CLASSIC** — the old shift: amber regolith, muted mono palette, no gadgets,
-  no backtalk. Just you, the dust, and the drop.
-- **REMIX** — the neon shift: hue-cycling everything, particle showers, the
-  young miner's running commentary (he has *opinions* about this job), and
-  **gadgets that drop from ore**: Ore Magnet (scoop crystals even mid-hop),
-  Hull Shield, Slow-Mo, and the Mega Drill (smash straight through boulders).
+Temporary boons scattered in the ore — the game stays about dodging, but these
+help, and the **auto-cannon** shows up more often once the fire starts:
+
+- **Auto-Cannon** — the rover **fires automatically**, bolts streaking up to
+  **shoot the aliens' bombs out of the sky** (and the ships that dropped them).
+- **Hull Shield** — briefly invulnerable.
+- **Slow-Mo** — the world eases to half speed.
+- **Ore Magnet** — scoop crystals even mid-hop.
+- **Mega Drill** — smash straight through boulders.
+
+## The story (coffee breaks)
+
+Each sector clear is a **Ms-Pac-Man-style intermission** — a titled cutscene
+that unfolds the plot on a clean stage: **Act I — They Meet**, **Act II — The
+Misunderstanding**, **Act III — They Arm**, **Act IV — The Reckoning** (a
+formation of saucers advancing: the literal shape of Part 2). The natives
+narrate in their own tongue over each break.
 
 ## Two voices
 
-- **The miner** (remix) — young, chipper, already complaining: clock-in
+- **The miner** — young, chipper, already complaining: clock-in
   optimism, ore-scooping delight, increasingly alarmed notes as the locals
   turn on him, crash grumbles, a high-score line nobody will ever hear.
 - **The natives** — an alien tongue all their own, heard on the **arcade

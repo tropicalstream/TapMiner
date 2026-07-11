@@ -9,12 +9,6 @@ import kotlin.random.Random
 
 enum class GameState { TITLE, PLAYING, LIFE_LOST, SECTOR_CLEAR, GAME_OVER }
 
-/** Two shifts of the same miserable job. */
-enum class Mode(val label: String, val blurb: String) {
-    CLASSIC("CLASSIC", "THE OLD SHIFT: AMBER DUST, NO MERCY"),
-    REMIX("REMIX", "NEON ORE, GADGETS, STORY CUTSCENES, FURIOUS LOCALS"),
-}
-
 interface GameHost {
     fun sfx(id: Int, pitch: Float = 1f, vol: Float = 1f)
     fun startEngineLoop()
@@ -39,7 +33,10 @@ class Ufo(var x: Float, var y: Float, val dir: Float, val hostile: Boolean = tru
 }
 class Bomb(var x: Float, var y: Float, var vy: Float) { var dead = false }
 
-/** A collectible gadget (remix only). */
+/** A player bolt fired by the AUTO-CANNON gadget — rises to shoot down fire. */
+class Shot(var x: Float, var y: Float) { var dead = false }
+
+/** A collectible gadget. */
 class Gizmo(val worldX: Float, val type: Int) { var dead = false }
 
 class Particle {
@@ -70,18 +67,22 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
         const val RESPAWN_INVULN = 2.2f
         const val SPAWN_AHEAD = 30f       // how far ahead of the screen we seed hazards
 
-        // Gadgets (remix): magnet grabs ore mid-air, shield, slow, drill smashes rocks.
-        const val GIZ_MAGNET = 0
+        // Gadgets: the AUTO-CANNON is the headline — it lets the rover shoot
+        // down the aliens' fire. The rest ease the run: magnet, shield, slow,
+        // drill (smashes rocks). All temporary; dodging is the real game.
+        const val GIZ_CANNON = 0
         const val GIZ_SHIELD = 1
         const val GIZ_SLOW = 2
-        const val GIZ_DRILL = 3
+        const val GIZ_MAGNET = 3
+        const val GIZ_DRILL = 4
+        const val GIZ_COUNT = 5
         const val GIZMO_DURATION = 9f
-        val GIZMO_NAMES = arrayOf("ORE MAGNET!", "HULL SHIELD!", "SLOW-MO!", "MEGA DRILL!")
+        val GIZMO_NAMES = arrayOf("AUTO-CANNON!", "HULL SHIELD!", "SLOW-MO!", "ORE MAGNET!", "MEGA DRILL!")
+        const val SHOT_SPEED = 26f
+        const val CANNON_INTERVAL = 0.28f
     }
 
     var state = GameState.TITLE; private set
-    var mode = Mode.CLASSIC; private set
-    var selMode = 0; private set
     var time = 0f; private set
 
     // Viewport-derived visible half-width (set by the renderer, GL thread).
@@ -130,9 +131,11 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
     private var lastAngerTier = 0
     private var ufoTimer = 6f
 
-    // --- gadgets (remix) ---
+    // --- gadgets ---
     var activeGizmo = -1; private set
     var gizmoT = 0f; private set
+    val shots = ArrayList<Shot>()
+    private var cannonT = 0f
 
     // --- score / progress ---
     var sector = 1; private set
@@ -164,27 +167,25 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
     private var vowSaid = true
     private var vowT = 0f
 
-    private val voiceOn get() = mode == Mode.REMIX
+    // One game, always the full experience: voice, gadgets, story on.
+    private val voiceOn = true
 
     fun boot() {
-        highScore = store.highScore(0)
+        highScore = store.highScore
         state = GameState.TITLE
     }
 
     // ---------------------------------------------------------------- input
 
+    /** Vertical swipe: from game-over, back to the title. */
     fun select(d: Int) {
-        if (state == GameState.GAME_OVER) { toTitle(); return }
-        if (state != GameState.TITLE) return
-        selMode = (selMode + d + Mode.entries.size) % Mode.entries.size
-        highScore = store.highScore(selMode)
-        host.sfx(Sfx.UI, 1.2f, 0.6f)
+        if (state == GameState.GAME_OVER) toTitle()
     }
 
     /** Swipe: shift gear. dir +1 = faster (forward), -1 = slower (back). */
     fun shiftGear(dir: Int) {
         when (state) {
-            GameState.TITLE -> select(dir)
+            GameState.TITLE -> {}
             GameState.GAME_OVER -> toTitle()
             GameState.PLAYING, GameState.SECTOR_CLEAR -> {
                 if (!roverAlive) return
@@ -200,11 +201,10 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
         }
     }
 
-    /** Tap: hop the rover — or select / restart from the menus. */
+    /** Tap: hop the rover — or start / restart from the menus. */
     fun tap() {
         when (state) {
-            GameState.TITLE -> startGame(Mode.entries[selMode])
-            GameState.GAME_OVER -> startGame(mode)
+            GameState.TITLE, GameState.GAME_OVER -> startGame()
             GameState.PLAYING, GameState.SECTOR_CLEAR -> jump()
             else -> {}
         }
@@ -221,9 +221,7 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
 
     // ----------------------------------------------------------------- flow
 
-    private fun startGame(m: Mode) {
-        mode = m
-        selMode = m.ordinal
+    private fun startGame() {
         score = 0
         oreLoad = 0
         lives = 3
@@ -231,8 +229,9 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
         anger = 0f
         lastAngerTier = 0
         activeGizmo = -1
+        shots.clear()
         nextLifeAt = EXTRA_LIFE_EVERY
-        highScore = store.highScore(m.ordinal)
+        highScore = store.highScore
         store.games++
         host.sfx(Sfx.START)
         beginSector(reset = true)
@@ -258,7 +257,7 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
         host.setEngineRate(0.7f + gear * 0.22f)
         flash("SECTOR $sector - GET READY", 2.2f)
         host.sfx(Sfx.WAVE)
-        store.setBestWave(mode.ordinal, sector)
+        store.bestSector = sector
     }
 
     private fun spawnRover() {
@@ -315,15 +314,8 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
                     score += 250 * sector
                     checkExtraLife()
                     state = GameState.SECTOR_CLEAR
-                    // Remix runs a longer, story-telling intermission (a la
-                    // Ms Pac-Man); classic just takes its coffee and moves on.
-                    if (mode == Mode.REMIX) {
-                        stateT = 5.5f
-                        // the renderer/HUD paint the "ACT N" cutscene
-                    } else {
-                        stateT = 3.2f
-                        flash("OUTPOST $sector STAKED - COFFEE BREAK", 3f)
-                    }
+                    stateT = 5.5f   // a story-telling intermission (a la Ms Pac-Man)
+                    shots.clear()
                     host.stopEngineLoop()
                     // The natives narrate in their own tongue over the break.
                     host.say("alien_coffee_${1 + rng.nextInt(4)}", urgent = true)
@@ -410,6 +402,8 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
         updateAnger(dt)
         updateUfos(dt, slow)
         updateBombs(dt, slow)
+        updateCannon(dt)
+        updateShots(dt)
 
         // prune passed hazards
         var i = obstacles.size - 1
@@ -460,8 +454,11 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
             // reserve the full extent: [center-w, center+w], edge gap == gap
             val center = seededTo + gap + w
             obstacles.add(Obstacle(type, center, w))
-            if (mode == Mode.REMIX && type == ObType.ORE && rng.nextFloat() < 0.08f) {
-                gizmos.add(Gizmo(center + 2f, rng.nextInt(4)))
+            if (type == ObType.ORE && rng.nextFloat() < 0.11f) {
+                // Bias toward the auto-cannon once the locals are hostile — help
+                // arrives when there's fire to shoot down.
+                val gt = if (sector >= 3 && rng.nextFloat() < 0.45f) GIZ_CANNON else rng.nextInt(GIZ_COUNT)
+                gizmos.add(Gizmo(center + 2f, gt))
             }
             seededTo = center + w
             lastSeedType = type
@@ -539,6 +536,7 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
         lives--
         mineCombo = 0
         shake = 1f
+        activeGizmo = -1     // a wreck loses its gadget
         explode(roverScreenX, 0.8f, 0.05f, 70, 8f)
         host.sfx(Sfx.CRASH)
         host.stopEngineLoop()
@@ -546,6 +544,7 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
         state = GameState.LIFE_LOST
         stateT = 1.7f
         bombs.clear()
+        shots.clear()
         if (voiceOn) host.say(if (rng.nextBoolean()) "death_1" else "death_2", urgent = true)
     }
 
@@ -560,10 +559,54 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
                 g.dead = true
                 activeGizmo = g.type
                 gizmoT = GIZMO_DURATION
+                cannonT = 0f
                 flash(GIZMO_NAMES[g.type], 2f)
                 host.sfx(Sfx.GIZ_GET)
                 if (voiceOn) host.say("power_up")
             }
+        }
+    }
+
+    /** AUTO-CANNON gadget: the rover fires a rising bolt on a steady cadence. */
+    private fun updateCannon(dt: Float) {
+        if (activeGizmo != GIZ_CANNON || !roverAlive) return
+        cannonT -= dt
+        if (cannonT <= 0f) {
+            cannonT = CANNON_INTERVAL
+            shots.add(Shot(roverScreenX, roverY + 1.3f))
+            host.sfx(Sfx.SHOOT, 1.1f + rng.nextFloat() * 0.1f, 0.55f)
+        }
+    }
+
+    /** Bolts rise and shoot down enemy fire (bombs) and the ships that dropped it. */
+    private fun updateShots(dt: Float) {
+        var i = shots.size - 1
+        while (i >= 0) {
+            val s = shots[i]
+            s.y += SHOT_SPEED * dt
+            var hit = s.y > 16f
+            // vs bombs — turning enemy fire harmless is the whole appeal
+            var bi = bombs.size - 1
+            while (bi >= 0) {
+                val b = bombs[bi]
+                if (abs(b.x - s.x) < 1.1f && abs(b.y - s.y) < 1.2f) {
+                    bombs.removeAt(bi); addScore(15); explode(b.x, b.y, 0.08f, 14, 4f)
+                    host.sfx(Sfx.SHOT_HIT); hit = true; break
+                }
+                bi--
+            }
+            // vs hostile ships
+            if (!hit) {
+                for (u in ufos) {
+                    if (u.hostile && abs(u.x - s.x) < 1.6f && abs(u.y - s.y) < 1.3f) {
+                        addScore(120); explode(u.x, u.y, rng.nextFloat(), 40, 6f)
+                        host.sfx(Sfx.UFO_DIE)
+                        ufos.remove(u); hit = true; break
+                    }
+                }
+            }
+            if (hit) shots.removeAt(i)
+            i--
         }
     }
 
@@ -582,11 +625,13 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
 
     private fun updateUfos(dt: Float, slow: Float) {
         val tier = angerTier
-        // Sector 1: the natives are peaceful — curious ships drift by, never
-        // attack. From sector 2 on they've had enough and fight back.
-        val hostile = sector >= 2
-        val wantShips = sector == 1 || tier > 0
-        val cap = if (sector == 1) 1 else tier
+        // Sectors 1-2: the natives are peaceful — curious ships drift by,
+        // watching, never attacking. By SECTOR 3 they've armed and turned
+        // antagonistic, and now they open fire.
+        val hostile = sector >= 3
+        val peacefulPhase = sector <= 2
+        val wantShips = peacefulPhase || tier > 0
+        val cap = if (peacefulPhase) 1 else tier
         if (wantShips && state == GameState.PLAYING) {
             ufoTimer -= dt
             if (ufoTimer <= 0f && ufos.size < maxOf(1, cap)) {
@@ -653,7 +698,7 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
         vowT = 4.5f
         host.stopEngineLoop()
         host.sfx(Sfx.GAMEOVER)
-        store.setHighScore(mode.ordinal, score)
+        store.highScore = score
         if (score >= highScore && score > 0) {
             highScore = score
             flash("NEW HIGH SCORE!", 3.5f)
@@ -665,7 +710,7 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
     private fun addScore(n: Int) {
         score += n
         checkExtraLife()
-        if (score > highScore) { highScore = score; store.setHighScore(mode.ordinal, score) }
+        if (score > highScore) { highScore = score; store.highScore = score }
     }
 
     private fun checkExtraLife() {
@@ -696,7 +741,7 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
             val a = rng.nextFloat() * 6.2832f; val sp = rng.nextFloat() * 4f
             p.vx = cos(a) * sp; p.vy = 1f + abs(sin(a)) * 4f; p.vz = 0f
             p.life = 0.5f + rng.nextFloat() * 0.4f; p.maxLife = p.life
-            p.hue = if (mode == Mode.REMIX) (0.45f + rng.nextFloat() * 0.35f) else 0.15f
+            p.hue = 0.45f + rng.nextFloat() * 0.35f
             particles.add(p)
         }
     }

@@ -44,7 +44,10 @@ class Sfx(private val context: Context) {
         const val GIZ_GET = 18
         const val GIZ_END = 19
         const val UI = 20
-        private const val COUNT = 21
+        const val SHOOT = 21       // auto-cannon bolt
+        const val SHOT_HIT = 22    // bolt destroys a falling bomb
+        const val UFO_DIE = 23     // a hostile ship shot down
+        private const val COUNT = 24
         private const val RATE = 22050
     }
 
@@ -110,6 +113,15 @@ class Sfx(private val context: Context) {
                 ids[GIZ_GET] = load(dir, "gizget", arpeggio(intArrayOf(659, 880, 1174, 1568), 55, 0.75f))
                 ids[GIZ_END] = load(dir, "gizend", buf(260) { t -> sine(700f - 380f * t, t) * exp(-t * 8f) * 0.4f })
                 ids[UI] = load(dir, "ui", buf(35) { t -> sine(950f, t) * exp(-t * 60f) * 0.5f })
+                ids[SHOOT] = load(dir, "shoot", buf(90) { t -> (saw(1400f - 800f * t, t) + 0.2f * noise()) * exp(-t * 28f) * 0.45f })
+                ids[SHOT_HIT] = load(dir, "shhit", buf(150) { t ->
+                    val crush = if ((t * 46f).toInt() % 2 == 0) 1f else 0.5f
+                    ((noise() * 0.6f + sine(520f - 240f * t, t) * 0.4f) * crush) * exp(-t * 16f)
+                })
+                ids[UFO_DIE] = load(dir, "udie", buf(650) { t ->
+                    val f = 900f - t * 750f
+                    (saw(f, t) * 0.5f + sine(f * 0.5f, t) * 0.3f + noise() * 0.25f * exp(-t * 8f)) * exp(-t * 4.2f)
+                })
                 loaded = true
             }
         }

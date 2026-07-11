@@ -6,7 +6,6 @@ import android.opengl.Matrix
 import android.util.Log
 import com.tapminer.engine.Game
 import com.tapminer.engine.GameState
-import com.tapminer.engine.Mode
 import com.tapminer.engine.ObType
 import com.tapminer.engine.Obstacle
 import java.nio.ByteBuffer
@@ -115,9 +114,9 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
     private fun buildScene() {
         lines.reset(); fx.reset()
         buildSky()
-        // Remix coffee break = a Ms-Pac-Man-style story intermission on a clean
+        // The coffee break is a Ms-Pac-Man-style story intermission on a clean
         // stage; skip the scrolling world entirely for it.
-        if (game.mode == Mode.REMIX && game.state == GameState.SECTOR_CLEAR) {
+        if (game.state == GameState.SECTOR_CLEAR) {
             buildIntermission()
             drawParticles()
             return
@@ -130,15 +129,25 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
             if (game.roverAlive) buildRover()
             buildUfos()
             buildBombs()
+            buildShots()
         } else {
             // Attract mode: the rover idles menacingly (wheels turning) while
             // the natives' children scatter ahead of it.
             buildRoverAt(game.roverScreenX, 0f, 0f, game.wheelSpin, 1f)
             buildFleeingKids()
         }
-        // Classic coffee break still shows the little ones bolting for cover.
-        if (game.state == GameState.SECTOR_CLEAR) buildFleeingKids()
         drawParticles()
+    }
+
+    /** Auto-cannon bolts streaking up to intercept the aliens' fire. */
+    private fun buildShots() {
+        val ss = game.shots
+        for (i in 0 until ss.size) {
+            val s = ss[i]
+            hsv((game.time * 0.9f) % 1f, 0.5f, 1f)
+            lines.line(s.x, s.y - 0.9f, 0f, s.x, s.y, 0f, rgb[0], rgb[1], rgb[2], 0.9f)
+            fx.v(s.x, s.y, 0f, 1f, 1f, 1f, 1f)
+        }
     }
 
     private fun drawParticles() {
@@ -146,8 +155,7 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
         for (i in 0 until ps.size) {
             val p = ps[i]
             val k = (p.life / p.maxLife).coerceIn(0f, 1f)
-            if (game.mode == Mode.CLASSIC) { rgb[0] = 1f; rgb[1] = 0.75f; rgb[2] = 0.35f }
-            else hsv(p.hue, 1f, 1f)
+            hsv(p.hue, 1f, 1f)
             fx.v(p.x, p.y + groundScreenY(p.x), p.z, rgb[0], rgb[1], rgb[2], k)
         }
     }
@@ -162,17 +170,17 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
         }
         // Earthrise, far right-back — a hollow neon world with a crescent.
         val ex = hw * 0.62f; val ey = V * 1.15f; val er = V * 0.28f
-        if (game.mode == Mode.CLASSIC) { rgb[0] = 0.4f; rgb[1] = 0.7f; rgb[2] = 1f } else hsv((game.time * 0.05f + 0.55f) % 1f, 0.7f, 1f)
+        hsv((game.time * 0.05f + 0.55f) % 1f, 0.7f, 1f)
         ring(ex, ey, -6f, er, 22, rgb[0], rgb[1], rgb[2], 0.6f)
         ring(ex + er * 0.35f, ey, -6f, er * 0.8f, 18, rgb[0], rgb[1], rgb[2], 0.25f)
     }
 
     /** Two ranges of jagged mountains, scrolling at different slow rates. */
     private fun buildParallax() {
-        // Remix runs a lower, sleeker skyline — 20% smaller peaks.
-        val m = if (game.mode == Mode.REMIX) 0.8f else 1f
-        drawRidge(0.06f, 3.2f * m, 6.5f * m, 11, 0.55f, if (game.mode == Mode.CLASSIC) -1f else 0.7f, 0.35f)
-        drawRidge(0.14f, 1.4f * m, 4.2f * m, 15, 0.75f, if (game.mode == Mode.CLASSIC) -1f else 0.62f, 0.5f)
+        // A low, sleek neon skyline (the 20%-smaller peaks stuck as the default).
+        val m = 0.8f
+        drawRidge(0.06f, 3.2f * m, 6.5f * m, 11, 0.55f, 0.7f, 0.35f)
+        drawRidge(0.14f, 1.4f * m, 4.2f * m, 15, 0.75f, 0.62f, 0.5f)
     }
 
     private fun drawRidge(rate: Float, baseY: Float, amp: Float, teeth: Int, sat: Float, hueOrNeg: Float, alpha: Float) {
@@ -200,8 +208,7 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
     private fun groundScreenY(screenX: Float): Float = game.groundY(game.scroll + screenX)
 
     private fun buildGround() {
-        if (game.mode == Mode.CLASSIC) { rgb[0] = 1f; rgb[1] = 0.72f; rgb[2] = 0.3f }
-        else hsv((game.time * 0.04f + 0.5f) % 1f, 0.75f, 1f)
+        hsv((game.time * 0.04f + 0.5f) % 1f, 0.75f, 1f)
         val r = rgb[0]; val g = rgb[1]; val b = rgb[2]
         // The surface line, sampled across the screen so craters dip through it.
         val step = 0.7f
@@ -237,7 +244,7 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
     private fun buildOre(sx: Float) {
         val gy = groundScreenY(sx)
         val pulse = 0.6f + 0.4f * sin(game.time * 5f + sx)
-        if (game.mode == Mode.CLASSIC) { rgb[0] = 0.6f; rgb[1] = 1f; rgb[2] = 0.7f } else hsv((game.time * 0.6f + sx * 0.1f) % 1f, 0.8f, 1f)
+        hsv((game.time * 0.6f + sx * 0.1f) % 1f, 0.8f, 1f)
         val r = rgb[0]; val g = rgb[1]; val b = rgb[2]
         // a little crystal cluster
         lines.line(sx, gy, 0f, sx, gy + 1.1f, 0f, r, g, b, pulse)
@@ -250,7 +257,7 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
 
     private fun buildRock(sx: Float, w: Float) {
         val gy = groundScreenY(sx)
-        if (game.mode == Mode.CLASSIC) { rgb[0] = 0.85f; rgb[1] = 0.6f; rgb[2] = 0.3f } else hsv((game.time * 0.03f + 0.08f) % 1f, 0.6f, 0.9f)
+        hsv((game.time * 0.03f + 0.08f) % 1f, 0.6f, 0.9f)
         val r = rgb[0]; val g = rgb[1]; val b = rgb[2]
         val h = 1.3f
         lines.line(sx - w, gy, 0f, sx - w * 0.5f, gy + h, 0f, r, g, b, 0.9f)
@@ -261,7 +268,7 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
 
     private fun buildSpire(sx: Float, w: Float) {
         val gy = groundScreenY(sx)
-        if (game.mode == Mode.CLASSIC) { rgb[0] = 0.8f; rgb[1] = 0.5f; rgb[2] = 0.5f } else hsv((game.time * 0.4f + 0.85f) % 1f, 0.8f, 1f)
+        hsv((game.time * 0.4f + 0.85f) % 1f, 0.8f, 1f)
         val r = rgb[0]; val g = rgb[1]; val b = rgb[2]
         lines.line(sx - w, gy, 0f, sx, gy + 2.4f, 0f, r, g, b, 0.9f)
         lines.line(sx + w, gy, 0f, sx, gy + 2.4f, 0f, r, g, b, 0.9f)
@@ -281,7 +288,7 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
     }
 
     private fun buildCraterRim(sx: Float, w: Float) {
-        if (game.mode == Mode.CLASSIC) { rgb[0] = 0.9f; rgb[1] = 0.65f; rgb[2] = 0.3f } else hsv((game.time * 0.04f + 0.5f) % 1f, 0.7f, 0.9f)
+        hsv((game.time * 0.04f + 0.5f) % 1f, 0.7f, 0.9f)
         val r = rgb[0]; val g = rgb[1]; val b = rgb[2]
         // little rim lips flanking the pit
         lines.line(sx - w, 0f, 0f, sx - w - 0.6f, 0.5f, 0f, r, g, b, 0.7f)
@@ -314,10 +321,11 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
     }
 
     private fun gizHue(type: Int) = when (type) {
-        Game.GIZ_MAGNET -> 0.02f
-        Game.GIZ_SHIELD -> 0.33f
-        Game.GIZ_SLOW -> 0.72f
-        else -> 0.5f
+        Game.GIZ_CANNON -> 0.0f      // hot red — the weapon
+        Game.GIZ_SHIELD -> 0.33f     // green
+        Game.GIZ_SLOW -> 0.72f       // violet
+        Game.GIZ_MAGNET -> 0.08f     // ember
+        else -> 0.5f                 // drill cyan
     }
 
     private fun buildRover() {
@@ -341,8 +349,7 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
 
     /** The lunar rover: a domed cockpit on a sprung chassis with two big wheels. */
     private fun buildRoverAt(x: Float, y: Float, tilt: Float, spin: Float, a: Float) {
-        val cr: Float; val cg: Float; val cb: Float
-        if (game.mode == Mode.CLASSIC) { cr = 1f; cg = 0.85f; cb = 0.4f } else { cr = 0.4f; cg = 0.95f; cb = 1f }
+        val cr = 0.4f; val cg = 0.95f; val cb = 1f
         val c = cos(tilt); val s = sin(tilt)
         // local segment helper (rotate around chassis center by tilt)
         fun ln(x0: Float, y0: Float, x1: Float, y1: Float, al: Float = a) {
@@ -536,10 +543,10 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
                 lines.line(u.x, u.y - 1f + bob, 0f, u.x, 0.4f, 0f, r, g, b, 0.12f + 0.08f * sin(u.t * 3f))
                 continue
             }
-            if (game.mode == Mode.CLASSIC) { rgb[0] = 1f; rgb[1] = 0.35f; rgb[2] = 0.3f } else hsv((game.time * 0.5f + i * 0.2f) % 1f, 0.9f, 1f)
+            hsv((game.time * 0.5f + i * 0.2f) % 1f, 0.9f, 1f)
             val r = rgb[0]; val g = rgb[1]; val b = rgb[2]
             ring(u.x, u.y + bob, 0f, 1.4f, 12, r, g, b, 0.95f)
-            if (game.mode == Mode.CLASSIC) { rgb[0] = 1f; rgb[1] = 0.5f; rgb[2] = 0.4f } else hsv((game.time * 0.5f + i * 0.2f + 0.33f) % 1f, 0.9f, 1f)
+            hsv((game.time * 0.5f + i * 0.2f + 0.33f) % 1f, 0.9f, 1f)
             ring(u.x, u.y + 0.45f + bob, 0f, 0.7f, 10, rgb[0], rgb[1], rgb[2], 0.95f)
             fx.v(u.x, u.y + 0.75f + bob, 0f, 1f, 1f, 1f, 0.8f + 0.2f * sin(u.t * 9f))
             // three angry legs / grabbers
@@ -589,19 +596,14 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
 
         when (game.state) {
             GameState.TITLE -> {
-                text("TAPMINER", 320f, 78f, 4.2f, hr, hg, hb)
-                text("PART 1", 320f, 116f, 1.6f, 1f, 0.85f, 0.4f, pulse)
-                text("BEFORE HE SWEPT - HE CONQUERED", 320f, 150f, 1.4f, 0.7f, 0.9f, 1f)
-                for ((i, m) in Mode.entries.withIndex()) {
-                    val sel = i == game.selMode
-                    val y = 216f + i * 48f
-                    if (sel) { hsv((game.time * 0.3f) % 1f, 0.8f, 1f); text("> ${m.label} <", 320f, y, 2.6f, rgb[0], rgb[1], rgb[2]) }
-                    else text(m.label, 320f, y, 2f, 0.55f, 0.6f, 0.7f)
-                }
-                text(Mode.entries[game.selMode].blurb, 320f, 336f, 1.25f, 0.75f, 0.9f, 1f, pulse * 0.7f + 0.3f)
-                if (game.highScore > 0) text("HI ${game.highScore}", 320f, 374f, 1.5f, 0.6f, 1f, 0.7f)
-                text("SWIPE TO CHOOSE - TAP TO CLOCK IN", 320f, 426f, 1.4f, 1f, 1f, 1f, pulse)
-                text("CONTINUES IN PART 2: TAPINVADERS", 320f, 458f, 1.0f, 0.6f, 0.65f, 0.75f, 0.8f)
+                text("TAPMINER", 320f, 96f, 4.4f, hr, hg, hb)
+                text("PART 1", 320f, 138f, 1.7f, 1f, 0.85f, 0.4f, pulse)
+                text("BEFORE HE SWEPT - HE CONQUERED", 320f, 176f, 1.6f, 0.7f, 0.9f, 1f)
+                text("HOP THE CRATERS - SHIFT THE GEARS", 320f, 262f, 1.5f, 0.8f, 0.9f, 1f)
+                text("MINE THE ORE - DODGE THEIR FIRE", 320f, 296f, 1.5f, 0.8f, 0.9f, 1f)
+                if (game.highScore > 0) text("HI ${game.highScore}", 320f, 344f, 1.6f, 0.6f, 1f, 0.7f)
+                text("TAP TO CLOCK IN", 320f, 400f, 2.1f, 0.5f, 1f, 0.6f, pulse)
+                text("CONTINUES IN PART 2: TAPINVADERS", 320f, 448f, 1.05f, 0.6f, 0.65f, 0.75f, 0.8f)
             }
             GameState.GAME_OVER -> {
                 bar()
@@ -610,20 +612,17 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
                 text("SECTOR ${game.sector} - HI ${game.highScore}", 320f, 282f, 1.5f, 0.7f, 0.9f, 1f)
                 val fl = 0.55f + 0.45f * sin(game.time * 2.2f)
                 text("THE LOCALS WILL REMEMBER THIS", 320f, 320f, 1.4f, 1f, 0.55f, 0.35f, fl)
-                text("TAP TO CLOCK BACK IN", 320f, 366f, 1.9f, 0.5f, 1f, 0.6f, pulse)
-                text("SWIPE FOR MODE SELECT", 320f, 398f, 1.3f, 0.7f, 0.85f, 1f)
-                text("NEXT - PART 2: TAPINVADERS - THEY FIGHT BACK", 320f, 434f, 1.15f, 0.85f, 0.7f, 1f, 0.8f)
+                text("TAP TO CLOCK BACK IN", 320f, 372f, 1.9f, 0.5f, 1f, 0.6f, pulse)
+                text("NEXT - PART 2: TAPINVADERS - THEY FIGHT BACK", 320f, 424f, 1.15f, 0.85f, 0.7f, 1f, 0.8f)
             }
             GameState.LIFE_LOST -> { bar(); text("NEW RIG DEPLOYING", 320f, 250f, 2f, 1f, 0.7f, 0.4f, pulse) }
             GameState.SECTOR_CLEAR -> {
                 bar()
-                if (game.mode == Mode.REMIX) {
-                    // The intermission title card, Ms-Pac-Man style.
-                    val act = (game.sector - 1).coerceIn(0, actTitles.size - 1)
-                    hsv((game.time * 0.25f) % 1f, 0.75f, 1f)
-                    text(actTitles[act], 320f, 66f, 2.1f, rgb[0], rgb[1], rgb[2])
-                    text("INTERMISSION - OUTPOST ${game.sector} SECURED", 320f, 96f, 1.2f, 0.75f, 0.9f, 1f, pulse * 0.6f + 0.4f)
-                }
+                // The intermission title card, Ms-Pac-Man style.
+                val act = (game.sector - 1).coerceIn(0, actTitles.size - 1)
+                hsv((game.time * 0.25f) % 1f, 0.75f, 1f)
+                text(actTitles[act], 320f, 66f, 2.1f, rgb[0], rgb[1], rgb[2])
+                text("INTERMISSION - OUTPOST ${game.sector} SECURED", 320f, 96f, 1.2f, 0.75f, 0.9f, 1f, pulse * 0.6f + 0.4f)
             }
             else -> bar()
         }
@@ -636,7 +635,7 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
 
     private fun bar() {
         text("${game.score}", 16f, 40f, 2.2f, 1f, 1f, 1f, 1f, center = false)
-        val md = "SECTOR ${game.sector} - ${game.mode.label}"
+        val md = "SECTOR ${game.sector}"
         text(md, 320f - StrokeFont.width(md, 1.4f) / 2f, 40f, 1.4f, 0.7f, 0.85f, 1f, 1f, center = false)
         // lives as little wheels, top right
         for (i in 0 until game.lives.coerceAtMost(6)) {

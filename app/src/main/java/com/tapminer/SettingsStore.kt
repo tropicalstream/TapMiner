@@ -4,8 +4,8 @@ import android.content.Context
 import android.os.Build
 
 /**
- * Tiny persistent store — no settings menu. Remembers a high score and best
- * sector PER MODE (classic / remix), and whether to render side-by-side.
+ * Tiny persistent store — no settings menu. One game, one high score, one best
+ * sector. Also whether to render side-by-side for the glasses.
  */
 class SettingsStore(context: Context) {
     private val p = context.getSharedPreferences("tapminer", Context.MODE_PRIVATE)
@@ -22,17 +22,13 @@ class SettingsStore(context: Context) {
 
     val sbs get() = isRayNeoX3 // side-by-side for the glasses, single view elsewhere
 
-    fun highScore(mode: Int): Int = p.getInt("hi$mode", 0)
+    var highScore: Int
+        get() = p.getInt("hi", 0)
+        set(v) { if (v > highScore) p.edit().putInt("hi", v).apply() }
 
-    fun setHighScore(mode: Int, v: Int) {
-        if (v > highScore(mode)) p.edit().putInt("hi$mode", v).apply()
-    }
-
-    fun bestWave(mode: Int): Int = p.getInt("bw$mode", 1)
-
-    fun setBestWave(mode: Int, v: Int) {
-        if (v > bestWave(mode)) p.edit().putInt("bw$mode", v).apply()
-    }
+    var bestSector: Int
+        get() = p.getInt("bestSector", 1)
+        set(v) { if (v > bestSector) p.edit().putInt("bestSector", v).apply() }
 
     var games: Int
         get() = p.getInt("games", 0)
