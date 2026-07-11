@@ -60,14 +60,22 @@ class Voice(private val context: Context) {
     }
 
     private fun loadPhrases() {
+        // The young miner (phrases.json) and the moon's natives, who speak their
+        // own tongue (phrases_alien.json). Each is generated with its own
+        // fish.audio voice model; the app just plays files by id.
+        loadPhraseFile("phrases.json")
+        loadPhraseFile("phrases_alien.json")
+    }
+
+    private fun loadPhraseFile(name: String) {
         runCatching {
-            val txt = context.assets.open("phrases.json").bufferedReader().use { it.readText() }
+            val txt = context.assets.open(name).bufferedReader().use { it.readText() }
             val o = JSONObject(txt)
             for (k in o.keys()) {
                 val v = o.get(k)
                 phrases[k] = if (v is JSONArray) List(v.length()) { i -> v.getString(i) } else listOf(v.toString())
             }
-        }.onFailure { Log.e(TAG, "phrases.json", it) }
+        }.onFailure { Log.e(TAG, name, it) }
     }
 
     /** clipId for a phrase id + variant index ("id" for single, "id_n" for variants). */
@@ -137,6 +145,11 @@ class Voice(private val context: Context) {
             return
         }
         val (cid, text) = job
+        // Give the natives a higher, faster, alien-ish fallback voice so the
+        // attract screen and coffee breaks don't sound like the miner. (The
+        // real fish.audio alien model replaces this once clips are generated.)
+        if (cid.startsWith("alien_")) { t.setPitch(1.5f); t.setSpeechRate(1.15f) }
+        else { t.setPitch(0.78f); t.setSpeechRate(0.92f) }
         val tmp = File(fbDir, "$cid.wav.tmp")
         val params = android.os.Bundle()
         @Suppress("DEPRECATION")

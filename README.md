@@ -1,5 +1,7 @@
 # TapMiner
 
+**PART 1 — BEFORE HE SWEPT, HE CONQUERED.**
+
 The prequel to TapMeteors and TapInvaders. Before he was the galaxy's least
 appreciated space sweeper, he was the galaxy's least appreciated **indentured
 mining intern** — young, hopelessly optimistic, and forty years from paying
@@ -49,15 +51,22 @@ There is no gun. You survive by *timing* and *gearing*, not shooting.
   **gadgets that drop from ore**: Ore Magnet (scoop crystals even mid-hop),
   Hull Shield, Slow-Mo, and the Mega Drill (smash straight through boulders).
 
-## The miner's voice (remix)
+## Two voices
 
-The same voice as the sweeper, decades and a lot of disillusionment earlier —
-naive, chipper, already complaining: clock-in optimism, ore-scooping delight,
-increasingly alarmed notes as the locals turn on him, crash grumbles, and a
-high-score line nobody will ever hear. Pre-generated with **fish.audio S2.1
-Pro** ([free developer API](https://fish.audio/blog/s2-1-pro-free-api/)) using
-the same player voice model as the sequels
-([`1864d40339ae4dbabf832f844c8d1d6f`](https://fish.audio/app/m/1864d40339ae4dbabf832f844c8d1d6f/)):
+- **The miner** (remix) — young, chipper, already complaining: clock-in
+  optimism, ore-scooping delight, increasingly alarmed notes as the locals
+  turn on him, crash grumbles, a high-score line nobody will ever hear.
+- **The natives** — an alien tongue all their own, heard on the **arcade
+  attract screen** (their children scatter, jabbering, ahead of your rover)
+  and on the **post-level coffee breaks** (they grumble about the sacred
+  hill you just carted off).
+
+Both are pre-generated with **fish.audio S2.1 Pro**
+([free developer API](https://fish.audio/blog/s2-1-pro-free-api/)), each with
+its own voice model — the miner
+([`b5f4515fd395410b9ed3aef6fa51d9a0`](https://fish.audio/app/m/b5f4515fd395410b9ed3aef6fa51d9a0/))
+and the natives
+([`f48d143a59a946ab87c0130fd081f349`](https://fish.audio/app/m/f48d143a59a946ab87c0130fd081f349/)):
 
 ```bash
 export FISH_API_KEY=...   # free at fish.audio

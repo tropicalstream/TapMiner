@@ -156,6 +156,7 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
     private val rng = Random(System.nanoTime())
     private var mineCombo = 0
     private var mineVoiceT = 0f
+    private var titleVoiceT = 3f
 
     private val voiceOn get() = mode == Mode.REMIX
 
@@ -281,17 +282,29 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
         updateParticles(dt)
 
         when (state) {
-            GameState.TITLE, GameState.GAME_OVER -> {}
+            GameState.TITLE -> {
+                // Arcade attract mode: the natives flee across the screen and
+                // jabber in their own tongue on a loop.
+                titleVoiceT -= dt
+                wheelSpin += dt * 5f
+                if (titleVoiceT <= 0f) {
+                    titleVoiceT = 5.5f + rng.nextFloat() * 4f
+                    host.say("alien_flee_${1 + rng.nextInt(4)}")
+                }
+            }
+            GameState.GAME_OVER -> {}
             GameState.PLAYING -> {
                 stepWorld(dt)
                 if (state == GameState.PLAYING && sectorProgress >= 1f) {
                     score += 250 * sector
                     checkExtraLife()
                     state = GameState.SECTOR_CLEAR
-                    stateT = 2.6f
+                    stateT = 3.2f
                     host.stopEngineLoop()
-                    flash("OUTPOST $sector STAKED", 2.4f)
-                    if (voiceOn) host.say("sector_${((sector - 1) % 6) + 1}")
+                    flash("OUTPOST $sector STAKED - COFFEE BREAK", 3f)
+                    // The post-level "coffee break": the natives grumble in
+                    // their language while the miner catches his breath.
+                    host.say("alien_coffee_${1 + rng.nextInt(4)}", urgent = true)
                     host.sfx(Sfx.CLEAR)
                 }
             }
@@ -334,7 +347,7 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
             roverY += roverVy * dt
             roverVy -= GRAV * slow * dt
             tilt = (roverVy * 0.045f)
-            val gy = groundY(scroll)
+            val gy = groundY(scroll + roverScreenX)
             if (roverY <= gy) {
                 roverY = gy
                 airborne = false
@@ -345,7 +358,7 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
             }
         } else {
             // follow terrain; a pit underfoot with no jump = you drive into it
-            val gy = groundY(scroll)
+            val gy = groundY(scroll + roverScreenX)
             roverY = gy
             if (gy < -0.4f) { crash("crater"); return }
         }
@@ -374,8 +387,12 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
             // spacing tightens with sector; classic is a touch more forgiving
             val gap = (7f - sector * 0.35f).coerceAtLeast(3.6f) + rng.nextFloat() * 4f
             seededTo += gap
+            // A safe on-ramp at the very start of a run: ore only, no lethal
+            // hazards, so the player learns to hop before anything can crash them.
+            val intro = sector == 1 && seededTo < 22f
             val roll = rng.nextFloat()
             val type = when {
+                intro -> ObType.ORE
                 roll < 0.30f -> ObType.ORE
                 roll < 0.52f -> ObType.CRATER
                 roll < 0.72f -> ObType.ROCK

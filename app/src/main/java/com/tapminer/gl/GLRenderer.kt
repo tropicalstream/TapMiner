@@ -124,8 +124,13 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
             buildUfos()
             buildBombs()
         } else {
-            buildRoverAt(game.roverScreenX, 0f, 0f, 0f, 1f)
+            // Attract mode: the rover idles menacingly (wheels turning) while
+            // the natives' children scatter ahead of it.
+            buildRoverAt(game.roverScreenX, 0f, 0f, game.wheelSpin, 1f)
+            buildFleeingKids()
         }
+        // Coffee break also shows the little ones bolting for cover.
+        if (game.state == GameState.SECTOR_CLEAR) buildFleeingKids()
         val ps = game.particles
         for (i in 0 until ps.size) {
             val p = ps[i]
@@ -353,10 +358,52 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
 
     private fun wheel(cx: Float, cy: Float, rad: Float, spin: Float, r: Float, g: Float, b: Float, a: Float) {
         ring(cx, cy, 0f, rad, 9, r, g, b, a)
-        for (k in 0 until 3) {
-            val ang = spin + k * 2.094f
-            lines.line(cx, cy, 0f, cx + cos(ang) * rad, cy + sin(ang) * rad, 0f, r, g, b, a * 0.7f)
+        // A "T" emblem spinning inside each hub (the brand). Its stem/bar rotate
+        // with the wheel so it reads as painted-on.
+        val c = cos(spin); val s = sin(spin)
+        val tr = rad * 0.62f
+        // top bar of the T (horizontal in wheel-local space)
+        lines.line(cx - tr * c, cy - tr * s, 0f, cx + tr * c, cy + tr * s, 0f, r, g, b, a)
+        // stem of the T (perpendicular, from bar center downward)
+        lines.line(cx, cy, 0f, cx + tr * s, cy - tr * c, 0f, r, g, b, a)
+    }
+
+    /** Little alien children sprinting away from the wheeled menace, arms up. */
+    private fun buildFleeingKids() {
+        val span = hw * 2f + 6f
+        for (k in 0 until 5) {
+            val spd = 3.2f + k * 0.5f
+            // run rightward (away from the rover on the left), wrapping the screen
+            val x = -hw + 1f + ((game.time * spd + k * 6.1f) % span)
+            if (x > hw + 1f) continue
+            val gy = groundScreenY(x)
+            val phase = game.time * 11f + k
+            hsv((0.28f + k * 0.12f + game.time * 0.1f) % 1f, 0.8f, 1f)
+            drawKid(x, gy, phase, rgb[0], rgb[1], rgb[2])
         }
+    }
+
+    private fun drawKid(x: Float, gy: Float, phase: Float, r: Float, g: Float, b: Float) {
+        val bob = kotlin.math.abs(sin(phase)) * 0.18f
+        val hipY = gy + 0.7f + bob
+        val shoulderY = hipY + 0.5f
+        // round head
+        ring(x, shoulderY + 0.35f, 0f, 0.26f, 7, r, g, b, 0.9f)
+        // two antennae with glowing tips (terror-erect)
+        lines.line(x - 0.08f, shoulderY + 0.58f, 0f, x - 0.22f, shoulderY + 0.95f, 0f, r, g, b, 0.8f)
+        lines.line(x + 0.08f, shoulderY + 0.58f, 0f, x + 0.22f, shoulderY + 0.95f, 0f, r, g, b, 0.8f)
+        fx.v(x - 0.22f, shoulderY + 0.98f, 0f, 1f, 1f, 1f, 0.8f)
+        fx.v(x + 0.22f, shoulderY + 0.98f, 0f, 1f, 1f, 1f, 0.8f)
+        // torso
+        lines.line(x, shoulderY, 0f, x, hipY, 0f, r, g, b, 0.9f)
+        // panic arms flung up
+        val sw = sin(phase) * 0.18f
+        lines.line(x, shoulderY, 0f, x - 0.38f, shoulderY + 0.45f + sw, 0f, r, g, b, 0.85f)
+        lines.line(x, shoulderY, 0f, x + 0.38f, shoulderY + 0.45f - sw, 0f, r, g, b, 0.85f)
+        // running legs, alternating
+        val ls = sin(phase) * 0.32f
+        lines.line(x, hipY, 0f, x - 0.22f + ls, gy, 0f, r, g, b, 0.9f)
+        lines.line(x, hipY, 0f, x + 0.22f + ls, gy, 0f, r, g, b, 0.9f)
     }
 
     private fun buildUfos() {
@@ -417,8 +464,9 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
 
         when (game.state) {
             GameState.TITLE -> {
-                text("TAPMINER", 320f, 92f, 4.4f, hr, hg, hb)
-                text("BEFORE HE SWEPT, HE DUG", 320f, 136f, 1.4f, 0.7f, 0.9f, 1f)
+                text("TAPMINER", 320f, 78f, 4.2f, hr, hg, hb)
+                text("PART 1", 320f, 116f, 1.6f, 1f, 0.85f, 0.4f, pulse)
+                text("BEFORE HE SWEPT - HE CONQUERED", 320f, 150f, 1.4f, 0.7f, 0.9f, 1f)
                 for ((i, m) in Mode.entries.withIndex()) {
                     val sel = i == game.selMode
                     val y = 216f + i * 48f
