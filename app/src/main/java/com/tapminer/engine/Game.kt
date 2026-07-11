@@ -112,7 +112,7 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
         var y = 0f
         for (i in 0 until obstacles.size) {
             val o = obstacles[i]
-            if (o.type != ObType.CRATER) continue
+            if (o.type != ObType.CRATER || o.dead) continue
             val d = worldX - o.worldX
             if (d > -o.w && d < o.w) {
                 val f = 1f - (d / o.w) * (d / o.w)
@@ -151,12 +151,18 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
     private var messageUntil = 0f
     var shake = 0f; private set
 
+    // A short "GET READY" freeze at sector starts and respawns: the world
+    // holds still so the player can read the terrain before it moves.
+    var readyT = 0f; private set
+
     val particles = ArrayList<Particle>()
     private val pool = ArrayDeque<Particle>()
     private val rng = Random(System.nanoTime())
     private var mineCombo = 0
     private var mineVoiceT = 0f
     private var titleVoiceT = 3f
+    private var vowSaid = true
+    private var vowT = 0f
 
     private val voiceOn get() = mode == Mode.REMIX
 
@@ -246,9 +252,11 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
         ufoTimer = (7f - sector * 0.4f).coerceAtLeast(2.5f) + rng.nextFloat() * 4f
         state = GameState.PLAYING
         seedTerrain()
+        if (!reset) clearRunway(16f)   // every sector opens with breathing room
+        readyT = 1.5f
         host.startEngineLoop()
         host.setEngineRate(0.7f + gear * 0.22f)
-        flash("SECTOR $sector", 2f)
+        flash("SECTOR $sector - GET READY", 2.2f)
         host.sfx(Sfx.WAVE)
         store.setBestWave(mode.ordinal, sector)
     }
@@ -292,7 +300,14 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
                     host.say("alien_flee_${1 + rng.nextInt(4)}")
                 }
             }
-            GameState.GAME_OVER -> {}
+            GameState.GAME_OVER -> {
+                // The bridge to Part 2: once the miner's last grumble fades,
+                // the natives deliver their vow — in formation, next time.
+                if (!vowSaid) {
+                    vowT -= dt
+                    if (vowT <= 0f) { vowSaid = true; host.say("alien_vow") }
+                }
+            }
             GameState.PLAYING -> {
                 stepWorld(dt)
                 if (state == GameState.PLAYING && sectorProgress >= 1f) {
@@ -311,7 +326,16 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
             GameState.LIFE_LOST -> {
                 stepScenery(dt)
                 stateT -= dt
-                if (stateT <= 0f) { spawnRover(); state = GameState.PLAYING; host.startEngineLoop() }
+                if (stateT <= 0f) {
+                    // Never respawn into trouble: flatten the road ahead, hold
+                    // the world still for a beat, and shimmer through the rest.
+                    clearRunway(16f)
+                    spawnRover()
+                    readyT = 1.4f
+                    flash("GET READY", 1.6f)
+                    state = GameState.PLAYING
+                    host.startEngineLoop()
+                }
             }
             GameState.SECTOR_CLEAR -> {
                 stepScenery(dt)
@@ -329,6 +353,14 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
     }
 
     private fun stepWorld(dt: Float) {
+        // GET READY: the world holds still; the rover idles; nothing can hurt you.
+        if (readyT > 0f) {
+            readyT -= dt
+            invuln = maxOf(invuln, 0.1f)
+            wheelSpin += dt * 3f
+            seedTerrain()
+            return
+        }
         val slow = if (activeGizmo == GIZ_SLOW) 0.55f else 1f
         val ds = speed * dt * slow
         scroll += ds
@@ -381,12 +413,24 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
 
     // --------------------------------------------------------- terrain seed
 
+    /**
+     * CLEARABILITY CONTRACT. Jump physics give airtime 2·JUMP_V/GRAV ≈ 1.05 s
+     * and reach speed·airtime — 7.3 units at gear 0, the worst case. So every
+     * hazard must be jumpable at ANY gear:
+     *  - crater half-width capped at 2.8 (pit span 5.6 < 7.3);
+     *  - placement reserves the FULL width of each obstacle, so edge-to-edge
+     *    gaps are guaranteed (craters can never merge into a mega-pit);
+     *  - after a crater the next hazard leaves a proper landing zone.
+     */
+    private var lastSeedType = ObType.ORE
+
     private fun seedTerrain() {
         val target = scroll + halfW + SPAWN_AHEAD
         while (seededTo < target) {
-            // spacing tightens with sector; classic is a touch more forgiving
-            val gap = (7f - sector * 0.35f).coerceAtLeast(3.6f) + rng.nextFloat() * 4f
-            seededTo += gap
+            // spacing tightens with sector, but never below a jumpable rhythm;
+            // landing room after a pit is sacred
+            var gap = (7f - sector * 0.35f).coerceAtLeast(3.6f) + rng.nextFloat() * 4f
+            if (lastSeedType == ObType.CRATER) gap = maxOf(gap, 5f)
             // A safe on-ramp at the very start of a run: ore only, no lethal
             // hazards, so the player learns to hop before anything can crash them.
             val intro = sector == 1 && seededTo < 22f
@@ -400,19 +444,36 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
                 else -> ObType.MINE
             }
             val w = when (type) {
-                ObType.CRATER -> 1.8f + rng.nextFloat() * (1.5f + sector * 0.15f)
+                ObType.CRATER -> (1.6f + rng.nextFloat() * (0.9f + sector * 0.1f)).coerceAtMost(2.8f)
                 ObType.ROCK -> 0.9f + rng.nextFloat() * 0.7f
                 ObType.SPIRE -> 0.5f + rng.nextFloat() * 0.4f
                 ObType.ORE -> 0.8f
                 ObType.MINE -> 0.6f
             }
-            obstacles.add(Obstacle(type, seededTo, w))
-            // remix scatters gadgets rarely
+            // reserve the full extent: [center-w, center+w], edge gap == gap
+            val center = seededTo + gap + w
+            obstacles.add(Obstacle(type, center, w))
             if (mode == Mode.REMIX && type == ObType.ORE && rng.nextFloat() < 0.08f) {
-                gizmos.add(Gizmo(seededTo + 2f, rng.nextInt(4)))
+                gizmos.add(Gizmo(center + 2f, rng.nextInt(4)))
             }
-            seededTo += w
+            seededTo = center + w
+            lastSeedType = type
         }
+    }
+
+    /**
+     * Flatten every lethal hazard from just behind the rover to `ahead` in
+     * front of it (ore may stay), and clear falling bombs — a guaranteed
+     * survivable runway for respawns and sector starts.
+     */
+    private fun clearRunway(ahead: Float) {
+        val rx = scroll + roverScreenX
+        for (i in 0 until obstacles.size) {
+            val o = obstacles[i]
+            if (o.type == ObType.ORE) continue
+            if (o.worldX + o.w > rx - 4f && o.worldX - o.w < rx + ahead) o.dead = true
+        }
+        bombs.clear()
     }
 
     // ----------------------------------------------------------- collisions
@@ -531,7 +592,7 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
             u.x += u.dir * (4.5f + tier) * slow * dt
             u.y += sin(u.t * 2f) * 1.2f * dt
             u.dropT -= dt * slow
-            if (u.dropT <= 0f && state == GameState.PLAYING) {
+            if (u.dropT <= 0f && state == GameState.PLAYING && readyT <= 0f) {
                 u.dropT = (1.6f - tier * 0.2f).coerceAtLeast(0.7f)
                 // aim a little ahead of the rover
                 bombs.add(Bomb(u.x, u.y - 0.8f, -2f))
@@ -550,10 +611,14 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
             b.y += b.vy * slow * dt
             b.x -= speed * dt * slow * 0.15f // slight drift with the world
             if (b.y <= 0f) {
-                // impact: cracks the ground into a fresh crater, dust flies
+                // impact: cracks the ground into a fresh (always-jumpable) crater —
+                // but never directly under the rover, where a pit would be an
+                // undodgeable instant kill. Close hits stay pure blast.
                 explode(b.x, 0.2f, 0.03f, 26, 5f)
                 host.sfx(Sfx.BOMB_HIT)
-                obstacles.add(Obstacle(ObType.CRATER, scroll + b.x, 1.6f))
+                if (abs(b.x - roverScreenX) > 3f) {
+                    obstacles.add(Obstacle(ObType.CRATER, scroll + b.x, 1.3f))
+                }
                 bombs.removeAt(i); i--; continue
             }
             // vs rover
@@ -571,6 +636,8 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
     private fun gameOver() {
         roverAlive = false
         state = GameState.GAME_OVER
+        vowSaid = false
+        vowT = 4.5f
         host.stopEngineLoop()
         host.sfx(Sfx.GAMEOVER)
         store.setHighScore(mode.ordinal, score)

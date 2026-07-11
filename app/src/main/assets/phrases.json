@@ -27,7 +27,11 @@
   "death_2": "Well, that's the lander dented. And me. Mostly me.",
   "power_up": "A gadget! Finally, something in this job that isn't trying to kill me.",
   "one_up": "A spare rig! The company must like me. The company likes no one.",
-  "game_over": "Contract terminated. And after all that unpaid enthusiasm. Typical.",
+  "game_over": [
+    "Contract terminated. And after all that unpaid enthusiasm. Typical.",
+    "Contract terminated. The locals were chanting something about 'next time' and 'your skies'. Probably nothing.",
+    "Shift's over. The natives kept pointing up at the stars and then at me. Friendly lot. I'm sure it's fine."
+  ],
   "hiscore": "A personal best! Nobody will ever know or care, but I'll know. That's something.",
   "speed_up": "Flooring it! What could possibly go wrong on an unpaved alien moon?"
 }

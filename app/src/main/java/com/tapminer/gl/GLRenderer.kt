@@ -474,16 +474,20 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
                     else text(m.label, 320f, y, 2f, 0.55f, 0.6f, 0.7f)
                 }
                 text(Mode.entries[game.selMode].blurb, 320f, 336f, 1.25f, 0.75f, 0.9f, 1f, pulse * 0.7f + 0.3f)
-                if (game.highScore > 0) text("HI ${game.highScore}", 320f, 380f, 1.5f, 0.6f, 1f, 0.7f)
-                text("SWIPE TO CHOOSE - TAP TO CLOCK IN", 320f, 436f, 1.4f, 1f, 1f, 1f, pulse)
+                if (game.highScore > 0) text("HI ${game.highScore}", 320f, 374f, 1.5f, 0.6f, 1f, 0.7f)
+                text("SWIPE TO CHOOSE - TAP TO CLOCK IN", 320f, 426f, 1.4f, 1f, 1f, 1f, pulse)
+                text("CONTINUES IN PART 2: TAPINVADERS", 320f, 458f, 1.0f, 0.6f, 0.65f, 0.75f, 0.8f)
             }
             GameState.GAME_OVER -> {
                 bar()
-                text("CONTRACT TERMINATED", 320f, 200f, 2.7f, 1f, 0.4f, 0.35f)
-                text("SCORE ${game.score}", 320f, 254f, 2.2f, 1f, 1f, 1f)
-                text("SECTOR ${game.sector} - HI ${game.highScore}", 320f, 294f, 1.5f, 0.7f, 0.9f, 1f)
-                text("TAP TO CLOCK BACK IN", 320f, 352f, 1.9f, 0.5f, 1f, 0.6f, pulse)
-                text("SWIPE FOR MODE SELECT", 320f, 388f, 1.35f, 0.7f, 0.85f, 1f)
+                text("CONTRACT TERMINATED", 320f, 192f, 2.7f, 1f, 0.4f, 0.35f)
+                text("SCORE ${game.score}", 320f, 244f, 2.2f, 1f, 1f, 1f)
+                text("SECTOR ${game.sector} - HI ${game.highScore}", 320f, 282f, 1.5f, 0.7f, 0.9f, 1f)
+                val fl = 0.55f + 0.45f * sin(game.time * 2.2f)
+                text("THE LOCALS WILL REMEMBER THIS", 320f, 320f, 1.4f, 1f, 0.55f, 0.35f, fl)
+                text("TAP TO CLOCK BACK IN", 320f, 366f, 1.9f, 0.5f, 1f, 0.6f, pulse)
+                text("SWIPE FOR MODE SELECT", 320f, 398f, 1.3f, 0.7f, 0.85f, 1f)
+                text("NEXT - PART 2: TAPINVADERS - THEY FIGHT BACK", 320f, 434f, 1.15f, 0.85f, 0.7f, 1f, 0.8f)
             }
             GameState.LIFE_LOST -> { bar(); text("NEW RIG DEPLOYING", 320f, 250f, 2f, 1f, 0.7f, 0.4f, pulse) }
             else -> bar()
