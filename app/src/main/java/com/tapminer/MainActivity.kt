@@ -84,15 +84,18 @@ class MainActivity : Activity(), GameHost {
     private fun select(d: Int) = act { game.select(d) }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_UP) {
-            when (event.keyCode) {
-                KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER,
-                KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_SPACE -> { tap(); return true }
-                KeyEvent.KEYCODE_DPAD_RIGHT -> { gear(1); return true }
-                KeyEvent.KEYCODE_DPAD_LEFT -> { gear(-1); return true }
-                KeyEvent.KEYCODE_DPAD_UP -> { select(-1); return true }
-                KeyEvent.KEYCODE_DPAD_DOWN -> { select(1); return true }
+        when (event.keyCode) {
+            // The temple tap. Fire on DOWN, not UP — a hop should land the
+            // instant your finger touches, not when it lifts. Consume UP too.
+            KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_SPACE -> {
+                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) tap()
+                return true
             }
+            KeyEvent.KEYCODE_DPAD_RIGHT -> { if (event.action == KeyEvent.ACTION_UP) gear(1); return true }
+            KeyEvent.KEYCODE_DPAD_LEFT -> { if (event.action == KeyEvent.ACTION_UP) gear(-1); return true }
+            KeyEvent.KEYCODE_DPAD_UP -> { if (event.action == KeyEvent.ACTION_UP) select(-1); return true }
+            KeyEvent.KEYCODE_DPAD_DOWN -> { if (event.action == KeyEvent.ACTION_UP) select(1); return true }
         }
         return super.dispatchKeyEvent(event)
     }
@@ -105,7 +108,10 @@ class MainActivity : Activity(), GameHost {
             MotionEvent.ACTION_UP -> {
                 val dx = ev.x - downX
                 val dy = ev.y - downY
-                val dead = max(16f, 0.02f * resources.displayMetrics.widthPixels)
+                // Generous tap window: a hop is the constant action, so a touch
+                // that barely moved counts as a tap even with a little drift.
+                // Only a deliberate drag past this becomes a gear/menu swipe.
+                val dead = max(44f, 0.06f * resources.displayMetrics.widthPixels)
                 if (abs(dx) < dead && abs(dy) < dead) { tap(); return true }
                 if (abs(dx) >= abs(dy)) {
                     // Forward swipe = shift up a gear (mapping confirmed on device).
