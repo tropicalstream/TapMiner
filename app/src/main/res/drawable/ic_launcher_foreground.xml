@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Earthrise crescent, far back -->
+    <path android:strokeColor="#803CA0FF" android:strokeWidth="2" android:fillColor="#00000000"
+        android:pathData="M82,30 m-11,0 a11,11 0 1,0 22,0 a11,11 0 1,0 -22,0" />
+
+    <!-- lunar surface with a crater dip -->
+    <path android:strokeColor="#FFFFB43C" android:strokeWidth="2.6" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M8,78 L34,78 C40,78 42,90 50,90 C58,90 60,78 66,78 L100,78" />
+
+    <!-- neon ore crystals on the ground -->
+    <path android:strokeColor="#FF46E08C" android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+        android:pathData="M84,78 L84,68 M80,78 L80,71 M88,78 L88,72 M80,71 L84,68 L88,72" />
+
+    <!-- the rover, hopping over the crater: domed cockpit, chassis, two wheels, thruster -->
+    <path android:strokeColor="#FF33F0FF" android:strokeWidth="2.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+        android:pathData="M34,54 L54,54 M34,54 L37,48 L50,48 L54,54 M40,48 L41,41 L48,41 L50,48" />
+    <path android:fillColor="#FF33F0FF" android:pathData="M44,45 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0" />
+    <!-- wheels -->
+    <path android:strokeColor="#FF33F0FF" android:strokeWidth="2.4" android:fillColor="#00000000"
+        android:pathData="M39,54 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0 M50,54 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <!-- thruster flare downward -->
+    <path android:strokeColor="#FFFFA030" android:strokeWidth="2.6" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M40,60 L38,68 M48,60 L50,68" />
+
+    <!-- angry local saucer up top -->
+    <path android:strokeColor="#FFFF4638" android:strokeWidth="2.4" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M18,26 L34,26 M22,26 L26,21 L30,21 L34,26 M20,30 L20,30 M26,30 L26,33" />
+
+    <!-- glow -->
+    <path android:pathData="M50,54 m-30,0 a30,30 0 1,0 60,0 a30,30 0 1,0 -60,0">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="46" android:centerY="52" android:gradientRadius="34">
+                <item android:offset="0.0" android:color="#2233F0FF" />
+                <item android:offset="1.0" android:color="#0033F0FF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

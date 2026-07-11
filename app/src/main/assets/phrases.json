@@ -1,0 +1,33 @@
+{
+  "start": "First day of the indenture! Forty years to freedom, and only a whole moon to colonize. Easy.",
+  "sector_1": "Outpost one, staked! The company will be so proud. They won't be, but they could be.",
+  "sector_2": "Another sector colonized. I'm basically a pioneer. A pioneer who isn't paid.",
+  "sector_3": "Look at me, taming the frontier. The frontier does not appear to consent.",
+  "sector_4": "Colony's spreading nicely. The brochure said 'adventure'. It did not say 'this'.",
+  "sector_5": "Halfway across the mare and still alive. Mum said I'd amount to nothing. Partial credit.",
+  "sector_6": "Progress! At this rate I'll be free by the time I'm ancient and bitter.",
+  "mine_good": [
+    "Ooh, shiny! The company takes ninety percent, but the other ten is basically mine.",
+    "More ore! Every crystal is one atom closer to freedom.",
+    "Cha-ching. Well, not for me, but somebody's getting rich.",
+    "Load's looking good. Almost worth the crushing existential dread."
+  ],
+  "anger_1": "Hello? Did I dig up someone's garden? They seem a bit cross.",
+  "anger_2": "Okay, the locals are officially annoyed. In my defence, the ore was just lying there.",
+  "anger_3": "Right, they're furious now. Turns out the moon was inhabited. Nobody tells me anything.",
+  "anger_max": "They are LIVID. I have single-handedly started an interplanetary incident. On day one.",
+  "ufo": [
+    "Incoming saucer! I'm sure they only want to talk. They're dropping something. Not talk.",
+    "Oh good, the neighbours. Angry, glowing, and armed. Standard.",
+    "A flying disc, for me? You really shouldn't have. Please leave."
+  ],
+  "jump_far": "Weeeee! Low gravity is the one genuine perk of indentured servitude.",
+  "close_call": "That was close. My hull insurance has a very unkind excess.",
+  "death_1": "Ow. That's coming out of my wages. All of it, probably.",
+  "death_2": "Well, that's the lander dented. And me. Mostly me.",
+  "power_up": "A gadget! Finally, something in this job that isn't trying to kill me.",
+  "one_up": "A spare rig! The company must like me. The company likes no one.",
+  "game_over": "Contract terminated. And after all that unpaid enthusiasm. Typical.",
+  "hiscore": "A personal best! Nobody will ever know or care, but I'll know. That's something.",
+  "speed_up": "Flooring it! What could possibly go wrong on an unpaved alien moon?"
+}
