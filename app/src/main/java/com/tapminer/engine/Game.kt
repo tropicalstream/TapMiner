@@ -12,7 +12,7 @@ enum class GameState { TITLE, PLAYING, LIFE_LOST, SECTOR_CLEAR, GAME_OVER }
 /** Two shifts of the same miserable job. */
 enum class Mode(val label: String, val blurb: String) {
     CLASSIC("CLASSIC", "THE OLD SHIFT: AMBER DUST, NO MERCY"),
-    REMIX("REMIX", "NEON ORE, GADGETS, FURIOUS LOCALS, BACKTALK"),
+    REMIX("REMIX", "NEON ORE, GADGETS, STORY CUTSCENES, FURIOUS LOCALS"),
 }
 
 interface GameHost {
@@ -32,7 +32,7 @@ class Obstacle(val type: ObType, val worldX: Float, val w: Float) {
 }
 
 /** An angry local's saucer, strafing overhead and dropping bombs. */
-class Ufo(var x: Float, var y: Float, val dir: Float) {
+class Ufo(var x: Float, var y: Float, val dir: Float, val hostile: Boolean = true) {
     var t = 0f
     var dropT = 1.2f
     var dead = false
@@ -315,11 +315,17 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
                     score += 250 * sector
                     checkExtraLife()
                     state = GameState.SECTOR_CLEAR
-                    stateT = 3.2f
+                    // Remix runs a longer, story-telling intermission (a la
+                    // Ms Pac-Man); classic just takes its coffee and moves on.
+                    if (mode == Mode.REMIX) {
+                        stateT = 5.5f
+                        // the renderer/HUD paint the "ACT N" cutscene
+                    } else {
+                        stateT = 3.2f
+                        flash("OUTPOST $sector STAKED - COFFEE BREAK", 3f)
+                    }
                     host.stopEngineLoop()
-                    flash("OUTPOST $sector STAKED - COFFEE BREAK", 3f)
-                    // The post-level "coffee break": the natives grumble in
-                    // their language while the miner catches his breath.
+                    // The natives narrate in their own tongue over the break.
                     host.say("alien_coffee_${1 + rng.nextInt(4)}", urgent = true)
                     host.sfx(Sfx.CLEAR)
                 }
@@ -576,14 +582,20 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
 
     private fun updateUfos(dt: Float, slow: Float) {
         val tier = angerTier
-        if (tier > 0 && state == GameState.PLAYING) {
+        // Sector 1: the natives are peaceful — curious ships drift by, never
+        // attack. From sector 2 on they've had enough and fight back.
+        val hostile = sector >= 2
+        val wantShips = sector == 1 || tier > 0
+        val cap = if (sector == 1) 1 else tier
+        if (wantShips && state == GameState.PLAYING) {
             ufoTimer -= dt
-            if (ufoTimer <= 0f && ufos.size < tier) {
-                ufoTimer = (5.5f - tier * 1.1f).coerceAtLeast(1.6f) + rng.nextFloat() * 3f
+            if (ufoTimer <= 0f && ufos.size < maxOf(1, cap)) {
+                ufoTimer = if (hostile) (5.5f - tier * 1.1f).coerceAtLeast(1.6f) + rng.nextFloat() * 3f
+                           else 6f + rng.nextFloat() * 6f
                 val dir = if (rng.nextBoolean()) 1f else -1f
-                ufos.add(Ufo(-dir * (halfW + 3f), 7f + rng.nextFloat() * 3f, dir))
+                ufos.add(Ufo(-dir * (halfW + 3f), 7f + rng.nextFloat() * 3f, dir, hostile))
                 host.sfx(Sfx.UFO)
-                if (voiceOn && rng.nextFloat() < 0.4f) host.say("ufo")
+                if (voiceOn && rng.nextFloat() < 0.4f) host.say(if (hostile) "ufo" else "ufo_peaceful")
             }
         }
         var i = ufos.size - 1
@@ -593,9 +605,9 @@ class Game(private val store: SettingsStore, private val host: GameHost) {
             u.x += u.dir * (4.5f + tier) * slow * dt
             u.y += sin(u.t * 2f) * 1.2f * dt
             u.dropT -= dt * slow
-            if (u.dropT <= 0f && state == GameState.PLAYING && readyT <= 0f) {
+            // Only hostile ships drop bombs, and never during the ready freeze.
+            if (u.hostile && u.dropT <= 0f && state == GameState.PLAYING && readyT <= 0f) {
                 u.dropT = (1.6f - tier * 0.2f).coerceAtLeast(0.7f)
-                // aim a little ahead of the rover
                 bombs.add(Bomb(u.x, u.y - 0.8f, -2f))
                 host.sfx(Sfx.BOMB_DROP, 1f, 0.6f)
             }

@@ -115,6 +115,13 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
     private fun buildScene() {
         lines.reset(); fx.reset()
         buildSky()
+        // Remix coffee break = a Ms-Pac-Man-style story intermission on a clean
+        // stage; skip the scrolling world entirely for it.
+        if (game.mode == Mode.REMIX && game.state == GameState.SECTOR_CLEAR) {
+            buildIntermission()
+            drawParticles()
+            return
+        }
         buildParallax()
         buildGround()
         buildHazards()
@@ -129,8 +136,12 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
             buildRoverAt(game.roverScreenX, 0f, 0f, game.wheelSpin, 1f)
             buildFleeingKids()
         }
-        // Coffee break also shows the little ones bolting for cover.
+        // Classic coffee break still shows the little ones bolting for cover.
         if (game.state == GameState.SECTOR_CLEAR) buildFleeingKids()
+        drawParticles()
+    }
+
+    private fun drawParticles() {
         val ps = game.particles
         for (i in 0 until ps.size) {
             val p = ps[i]
@@ -158,8 +169,10 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
 
     /** Two ranges of jagged mountains, scrolling at different slow rates. */
     private fun buildParallax() {
-        drawRidge(0.06f, 3.2f, 6.5f, 11, 0.55f, if (game.mode == Mode.CLASSIC) -1f else 0.7f, 0.35f)
-        drawRidge(0.14f, 1.4f, 4.2f, 15, 0.75f, if (game.mode == Mode.CLASSIC) -1f else 0.62f, 0.5f)
+        // Remix runs a lower, sleeker skyline — 20% smaller peaks.
+        val m = if (game.mode == Mode.REMIX) 0.8f else 1f
+        drawRidge(0.06f, 3.2f * m, 6.5f * m, 11, 0.55f, if (game.mode == Mode.CLASSIC) -1f else 0.7f, 0.35f)
+        drawRidge(0.14f, 1.4f * m, 4.2f * m, 15, 0.75f, if (game.mode == Mode.CLASSIC) -1f else 0.62f, 0.5f)
     }
 
     private fun drawRidge(rate: Float, baseY: Float, amp: Float, teeth: Int, sat: Float, hueOrNeg: Float, alpha: Float) {
@@ -406,11 +419,123 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
         lines.line(x, hipY, 0f, x + 0.22f + ls, gy, 0f, r, g, b, 0.9f)
     }
 
+    // -------------------------------------------------- story intermission
+
+    val actTitles = arrayOf(
+        "ACT I  -  THEY MEET",
+        "ACT II  -  THE MISUNDERSTANDING",
+        "ACT III  -  THEY ARM",
+        "ACT IV  -  THE RECKONING",
+    )
+
+    /**
+     * Ms-Pac-Man-style cutscene played on the remix coffee break. A flat stage,
+     * the rover on the left, the natives acting out the next beat of the
+     * story on the right — from first contact to the vow that becomes Part 2.
+     */
+    private fun buildIntermission() {
+        val t = game.time
+        val act = (game.sector - 1).coerceIn(0, actTitles.size - 1)
+        // lit stage floor
+        hsv((t * 0.04f + 0.5f) % 1f, 0.75f, 1f)
+        lines.line(-hw - 2f, 0f, 0f, hw + 2f, 0f, 0f, rgb[0], rgb[1], rgb[2], 0.9f)
+
+        val rx = -hw * 0.5f
+        buildRoverAt(rx, 0f, 0f, t * 6f, 1f)
+
+        when (act) {
+            0 -> {  // They meet: a peaceful saucer, a waving native, a little heart
+                val ux = hw * 0.32f; val uy = 5f + 0.5f * sin(t * 1.8f)
+                drawSaucer(ux, uy, 1.1f, hostile = false, t = t)
+                hsv(0.4f, 0.5f, 1f)
+                lines.line(ux, uy - 1.2f, 0f, ux, 0.6f, 0f, rgb[0], rgb[1], rgb[2], 0.2f + 0.15f * sin(t * 4f))
+                drawWavingAlien(ux - 0.3f, 0f, t, wave = true)
+                hsv(0.95f, 0.7f, 1f)
+                fx.v((rx + ux) / 2f, 3.2f + 0.4f * sin(t * 3f), 0f, rgb[0], rgb[1], rgb[2], 0.5f + 0.5f * sin(t * 3f))
+            }
+            1 -> {  // The misunderstanding: rover hauls a glowing hill away; native dismayed
+                val hx = rx - 3.4f
+                hsv((t * 0.6f) % 1f, 0.85f, 1f)
+                var px = hx + 1f; var py = 0f
+                for (k in 1..6) {
+                    val a = k * 1.047f; val vx = hx + cos(a); val vy = 1f + sin(a)
+                    lines.line(px, py, 0f, vx, vy, 0f, rgb[0], rgb[1], rgb[2], 0.85f); px = vx; py = vy
+                }
+                lines.line(rx - 1.4f, 0.6f, 0f, hx + 1f, 0.6f, 0f, 0.6f, 0.6f, 0.7f, 0.5f) // tow line
+                drawWavingAlien(hw * 0.34f, 0f, t, wave = false)
+                // an alarmed exclamation over the native's head
+                hsv(0.03f, 0.9f, 1f)
+                val bl = 0.5f + 0.5f * sin(t * 8f)
+                lines.line(hw * 0.34f, 2.7f, 0f, hw * 0.34f, 3.6f, 0f, rgb[0], rgb[1], rgb[2], bl)
+                fx.v(hw * 0.34f, 2.45f, 0f, 1f, 0.4f, 0.3f, bl)
+            }
+            2 -> {  // They arm: saucers under construction, welding sparks
+                for (k in 0 until 3) {
+                    val sx = hw * 0.08f + k * 3.2f; val sy = 4.6f + 0.3f * sin(t * 2f + k)
+                    drawSaucer(sx, sy, 0.85f, hostile = true, t = t)
+                    if (((t * 7f + k).toInt()) and 1 == 0) {
+                        hsv(0.13f, 0.35f, 1f)
+                        fx.v(sx + (k - 1) * 0.3f, sy - 1.1f, 0f, rgb[0], rgb[1], rgb[2], 0.9f)
+                    }
+                }
+                drawWavingAlien(hw * 0.5f, 0f, t, wave = false)
+            }
+            else -> {  // The reckoning: a formation advances — the shape of Part 2
+                val adv = (t * 1.1f) % 6f
+                for (row in 0 until 2) for (col in 0 until 4) {
+                    val sx = hw * 0.55f - col * 2.3f - adv + row * 0.5f
+                    val sy = 6.2f - row * 1.7f
+                    if (sx < -hw - 2f) continue
+                    drawSaucer(sx, sy, 0.7f, hostile = true, t = t)
+                }
+            }
+        }
+    }
+
+    private fun drawSaucer(x: Float, y: Float, sc: Float, hostile: Boolean, t: Float) {
+        if (hostile) hsv((t * 0.5f) % 1f, 0.9f, 1f) else hsv(0.42f, 0.5f, 1f)
+        ring(x, y, 0f, 1.3f * sc, 12, rgb[0], rgb[1], rgb[2], 0.95f)
+        if (hostile) hsv((t * 0.5f + 0.33f) % 1f, 0.9f, 1f) else hsv(0.47f, 0.5f, 1f)
+        ring(x, y + 0.45f * sc, 0f, 0.65f * sc, 10, rgb[0], rgb[1], rgb[2], 0.95f)
+        fx.v(x, y + 0.75f * sc, 0f, 1f, 1f, 1f, 0.8f)
+    }
+
+    private fun drawWavingAlien(x: Float, gy: Float, t: Float, wave: Boolean) {
+        val phase = t * 3f
+        val hipY = gy + 0.7f; val shoulderY = hipY + 0.5f
+        hsv(0.34f, 0.7f, 1f)
+        val r = rgb[0]; val g = rgb[1]; val b = rgb[2]
+        ring(x, shoulderY + 0.35f, 0f, 0.26f, 7, r, g, b, 0.9f)
+        lines.line(x - 0.08f, shoulderY + 0.58f, 0f, x - 0.2f, shoulderY + 0.95f, 0f, r, g, b, 0.8f)
+        lines.line(x + 0.08f, shoulderY + 0.58f, 0f, x + 0.2f, shoulderY + 0.95f, 0f, r, g, b, 0.8f)
+        fx.v(x - 0.2f, shoulderY + 0.98f, 0f, 1f, 1f, 1f, 0.8f)
+        fx.v(x + 0.2f, shoulderY + 0.98f, 0f, 1f, 1f, 1f, 0.8f)
+        lines.line(x, shoulderY, 0f, x, hipY, 0f, r, g, b, 0.9f)
+        lines.line(x, hipY, 0f, x - 0.22f, gy, 0f, r, g, b, 0.9f)
+        lines.line(x, hipY, 0f, x + 0.22f, gy, 0f, r, g, b, 0.9f)
+        // one arm waves (friendly) or both hang (dismayed)
+        val w = if (wave) kotlin.math.abs(sin(phase)) * 0.5f else -0.35f
+        lines.line(x, shoulderY, 0f, x + 0.4f, shoulderY + 0.35f + w, 0f, r, g, b, 0.85f)
+        lines.line(x, shoulderY, 0f, x - 0.35f, shoulderY - (if (wave) 0.05f else 0.35f), 0f, r, g, b, 0.85f)
+    }
+
     private fun buildUfos() {
         val us = game.ufos
         for (i in 0 until us.size) {
             val u = us[i]
             val bob = 0.12f * sin(u.t * 6f)
+            if (!u.hostile) {
+                // Peaceful sightseer: calm cyan-green, a gentle scanning beam,
+                // no grabbers — just watching, which is somehow worse.
+                hsv(0.42f, 0.5f, 1f)
+                val r = rgb[0]; val g = rgb[1]; val b = rgb[2]
+                ring(u.x, u.y + bob, 0f, 1.4f, 12, r, g, b, 0.9f)
+                hsv(0.47f, 0.5f, 1f)
+                ring(u.x, u.y + 0.45f + bob, 0f, 0.7f, 10, rgb[0], rgb[1], rgb[2], 0.9f)
+                fx.v(u.x, u.y + 0.75f + bob, 0f, 0.8f, 1f, 0.9f, 0.6f + 0.3f * sin(u.t * 3f))
+                lines.line(u.x, u.y - 1f + bob, 0f, u.x, 0.4f, 0f, r, g, b, 0.12f + 0.08f * sin(u.t * 3f))
+                continue
+            }
             if (game.mode == Mode.CLASSIC) { rgb[0] = 1f; rgb[1] = 0.35f; rgb[2] = 0.3f } else hsv((game.time * 0.5f + i * 0.2f) % 1f, 0.9f, 1f)
             val r = rgb[0]; val g = rgb[1]; val b = rgb[2]
             ring(u.x, u.y + bob, 0f, 1.4f, 12, r, g, b, 0.95f)
@@ -490,6 +615,16 @@ class GLRenderer(private val game: Game) : GLSurfaceView.Renderer {
                 text("NEXT - PART 2: TAPINVADERS - THEY FIGHT BACK", 320f, 434f, 1.15f, 0.85f, 0.7f, 1f, 0.8f)
             }
             GameState.LIFE_LOST -> { bar(); text("NEW RIG DEPLOYING", 320f, 250f, 2f, 1f, 0.7f, 0.4f, pulse) }
+            GameState.SECTOR_CLEAR -> {
+                bar()
+                if (game.mode == Mode.REMIX) {
+                    // The intermission title card, Ms-Pac-Man style.
+                    val act = (game.sector - 1).coerceIn(0, actTitles.size - 1)
+                    hsv((game.time * 0.25f) % 1f, 0.75f, 1f)
+                    text(actTitles[act], 320f, 66f, 2.1f, rgb[0], rgb[1], rgb[2])
+                    text("INTERMISSION - OUTPOST ${game.sector} SECURED", 320f, 96f, 1.2f, 0.75f, 0.9f, 1f, pulse * 0.6f + 0.4f)
+                }
+            }
             else -> bar()
         }
 
