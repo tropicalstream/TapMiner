@@ -13,6 +13,13 @@ X3 Pro** AR glasses — OpenGL ES 3.0, additive lines on black (transparent on
 the waveguide), parallax mountains and an Earthrise floating far back,
 rendered side-by-side per eye.
 
+## Screenshots
+
+<p>
+  <img src="images/title.png" width="45%" alt="TapMiner title screen with rover and parallax mountains">
+  <img src="images/gameplay.png" width="45%" alt="TapMiner gameplay, rover mining over cratered terrain">
+</p>
+
 ## Controls — two gestures, no settings menu
 
 The rover holds a fixed spot on the left while the mare scrolls past. You only
