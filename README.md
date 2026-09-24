@@ -1,17 +1,6 @@
 # TapMiner
 
-**PART 1 — BEFORE HE SWEPT, HE CONQUERED.**
-
-The prequel to TapMeteors and TapInvaders. Before he was the galaxy's least
-appreciated space sweeper, he was the galaxy's least appreciated **indentured
-mining intern** — young, hopelessly optimistic, and forty years from paying
-off his contract. His first assignment: colonize the moon by strip-mining it,
-and in the process thoroughly enrage the things that were already living here.
-
-A synthwave neon-vector take on the 1982 lunar side-scroller for the **RayNeo
-X3 Pro** AR glasses — OpenGL ES 3.0, additive lines on black (transparent on
-the waveguide), parallax mountains and an Earthrise floating far back,
-rendered side-by-side per eye.
+TapMiner is a synthwave neon-vector take on the 1982 lunar side-scroller, built for the RayNeo X3 Pro AR glasses as a prequel to TapMeteors and TapInvaders. It follows an indentured mining intern whose job is to strip-mine the moon, told through parallax mountains, an Earthrise floating in the distance, and titled intermission cutscenes narrated in an invented alien language. The core tension is that mining ore requires staying low to the ground, while surviving requires hopping over craters, boulders, and incoming bombs — every dodge is ore left behind, and every crystal collected visibly provokes the moon's native inhabitants, who go from peaceful onlookers to armed aggressors as a fury meter climbs across the game's sectors.
 
 ## Screenshots
 
@@ -20,99 +9,11 @@ rendered side-by-side per eye.
   <img src="images/gameplay.png" width="45%" alt="TapMiner gameplay, rover mining over cratered terrain">
 </p>
 
-## Controls — two gestures, no settings menu
+## Controls
 
-The rover holds a fixed spot on the left while the mare scrolls past. You only
-ever:
+- Tap to hop the rover over hazards
+- Swipe forward/back to shift gears, trading speed and score against reaction time
 
-| Gesture | Action |
-|---|---|
-| **Tap** | Hop the rover — a big, floaty low-gravity bound over craters, boulders, spires, and mines. |
-| **Swipe forward / back** | Shift **up / down a gear** (four gears). Faster = more distance and score, less time to read what's coming — and the engine literally revs with the shift. Gearing is also how you slide out from under a falling bomb. |
-| Swipe up / down | Game over: back to the title. |
+## Download
 
-No permanent gun. **The main game is to *avoid* enemy fire** — you survive by
-timing your hops, changing gears, and grabbing the occasional weapon.
-
-## The job
-
-- **Mine by driving over ore** at ground level — glowing crystal clusters
-  you scoop automatically. But hopping flies you clean over them, so every
-  jump you take to dodge a hazard is ore you leave behind. Stay low to get
-  rich; get rich and you die. Choose.
-- **Every crystal enrages the locals.** They start friendly — **sectors 1–2,
-  peaceful ships drift overhead, just watching.** But a FURY meter climbs as
-  you mine, and **by sector 3 they've armed and turned antagonistic**,
-  strafing overhead and **dropping bombs that blow fresh craters into your
-  path**, building to ground-shaking, screen-rattling wrath. Mining is the
-  whole point and the whole problem.
-- **Colonize sector by sector.** A progress bar tracks each sector; reach the
-  end to stake an outpost, then the next stretch starts angrier. Crash into a
-  rock, drop into a crater, or eat a bomb and you lose a rig — three to start,
-  a spare every 4,000 points.
-
-## Gadgets (drop from ore)
-
-Temporary boons scattered in the ore — the game stays about dodging, but these
-help, and the **auto-cannon** shows up more often once the fire starts:
-
-- **Auto-Cannon** — the rover **fires automatically**, bolts streaking up to
-  **shoot the aliens' bombs out of the sky** (and the ships that dropped them).
-- **Hull Shield** — briefly invulnerable.
-- **Slow-Mo** — the world eases to half speed.
-- **Ore Magnet** — scoop crystals even mid-hop.
-- **Mega Drill** — smash straight through boulders.
-
-## The story (coffee breaks)
-
-Each sector clear is a **Ms-Pac-Man-style intermission** — a titled cutscene
-that unfolds the plot on a clean stage: **Act I — They Meet**, **Act II — The
-Misunderstanding**, **Act III — They Arm**, **Act IV — The Reckoning** (a
-formation of saucers advancing: the literal shape of Part 2). The natives
-narrate in their own tongue over each break.
-
-## Two voices
-
-- **The miner** — young, chipper, already complaining: clock-in
-  optimism, ore-scooping delight, increasingly alarmed notes as the locals
-  turn on him, crash grumbles, a high-score line nobody will ever hear.
-- **The natives** — an alien tongue all their own, heard on the **arcade
-  attract screen** (their children scatter, jabbering, ahead of your rover)
-  and on the **post-level coffee breaks** (they grumble about the sacred
-  hill you just carted off).
-
-Both are pre-generated with **fish.audio S2.1 Pro**
-([free developer API](https://fish.audio/blog/s2-1-pro-free-api/)), each with
-its own voice model — the miner
-([`b5f4515fd395410b9ed3aef6fa51d9a0`](https://fish.audio/app/m/b5f4515fd395410b9ed3aef6fa51d9a0/))
-and the natives
-([`f48d143a59a946ab87c0130fd081f349`](https://fish.audio/app/m/f48d143a59a946ab87c0130fd081f349/)):
-
-```bash
-export FISH_API_KEY=...   # free at fish.audio
-python3 tools/generate_tts.py    # writes app/src/main/assets/tts/<id>.mp3
-./gradlew assembleDebug          # clips ship in the APK; no network at run time
-```
-
-Until the clips exist the app bakes an Android-TTS fallback **once** on first
-launch (never at run time — no stutter), so the character works out of the box.
-
-## Sound
-
-All synthesized at first launch, zero audio binaries: a looping rover motor
-whose **pitch revs with the gear**, the springy lunar hop, ore pings that
-climb with your mining combo, the aliens' deepening fury drone, saucer
-warbles, whistling bombs, crash, sector fanfares, 1UP, gadget chimes.
-
-## Build & install
-
-```bash
-cd ~/Projects/TapMiner
-./gradlew assembleDebug && adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
-
-JDK 17, AGP 8.7.3, Kotlin 2.0.21, compileSdk 35 / minSdk 29, zero
-dependencies, zero vendor AARs. Binocular SBS auto-enables on RayNeo hardware
-(detected by manufacturer identity, never `Build.MODEL` — it reports
-`ARGF20`). Audio and SoundPool run off the render thread; no speech is ever
-synthesized at run time.
+[TapMiner.apk](TapMiner.apk)
